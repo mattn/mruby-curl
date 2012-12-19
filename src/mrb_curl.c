@@ -66,7 +66,8 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   char error[CURL_ERROR_SIZE] = {0};
   CURL* curl;
   CURLcode res = CURLE_OK;
-  MEMFILE* mf;
+  MEMFILE* mf_header;
+  MEMFILE* mf_body;
 
   mrb_value url = mrb_nil_value();
   mrb_get_args(mrb, "o", &url);
@@ -74,21 +75,33 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
-  mf = memfopen();
+  mf_body = memfopen();
+  mf_header = memfopen();
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf_body);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf_header);
+  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
   res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
-  mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
-  memfclose(mf);
-  return str;
+  mrb_value str = mrb_str_new(mrb, mf_header->data, mf_header->size);
+  mrb_str_cat(mrb, str, mf_body->data, mf_body->size);
+  memfclose(mf_body);
+  memfclose(mf_header);
+
+  struct RClass* clazz = mrb_class_get(mrb, "HTTP");
+  clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
+  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+  mrb_value args[1];
+  args[0] = str;
+  mrb_value response = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  return response;
 }
 
 static mrb_value
@@ -97,7 +110,8 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   char error[CURL_ERROR_SIZE] = {0};
   CURL* curl;
   CURLcode res = CURLE_OK;
-  MEMFILE* mf;
+  MEMFILE* mf_header;
+  MEMFILE* mf_body;
 
   mrb_value url = mrb_nil_value();
   mrb_value data = mrb_nil_value();
@@ -110,23 +124,35 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
   // TODO: treating HASH/ARRAY.
-  mf = memfopen();
+  mf_body = memfopen();
+  mf_header = memfopen();
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf_body);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf_header);
+  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
   res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
-  mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
-  memfclose(mf);
-  return str;
+  mrb_value str = mrb_str_new(mrb, mf_header->data, mf_header->size);
+  mrb_str_cat(mrb, str, mf_body->data, mf_body->size);
+  memfclose(mf_body);
+  memfclose(mf_header);
+
+  struct RClass* clazz = mrb_class_get(mrb, "HTTP");
+  clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
+  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+  mrb_value args[1];
+  args[0] = str;
+  mrb_value response = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  return response;
 }
 
 #if 0
@@ -156,7 +182,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
   res = curl_easy_perform(curl);
   curl_easy_cleanup(curl);
   if (res != CURLE_OK) {
