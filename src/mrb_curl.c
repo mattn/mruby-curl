@@ -3,6 +3,8 @@
 #include <mruby/proc.h>
 #include <mruby/data.h>
 #include <mruby/string.h>
+#include <mruby/array.h>
+#include <mruby/hash.h>
 #include <mruby/class.h>
 #include <mruby/variable.h>
 #include <curl/curl.h>
@@ -66,34 +68,53 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   char error[CURL_ERROR_SIZE] = {0};
   CURL* curl;
   CURLcode res = CURLE_OK;
-  MEMFILE* mf_header;
-  MEMFILE* mf_body;
+  MEMFILE* mf;
 
   mrb_value url = mrb_nil_value();
-  mrb_get_args(mrb, "o", &url);
+  mrb_value headers = mrb_nil_value();
+  mrb_get_args(mrb, "o|o", &url, &headers);
 
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
-  mf_body = memfopen();
-  mf_header = memfopen();
+  if (!mrb_nil_p(headers) && mrb_type(headers) != MRB_TT_HASH) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
+  }
+  mf = memfopen();
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf_body);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf_header);
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+
+  struct curl_slist* headerlist = NULL;
+  if (!mrb_nil_p(headers)) {
+    mrb_value keys = mrb_hash_keys(mrb, headers);
+    int i, l = RARRAY_LEN(keys);
+    for (i = 0; i < l; i++) {
+      mrb_value key = mrb_ary_entry(keys, i);
+      mrb_value header = mrb_str_dup(mrb, key);
+      mrb_str_cat2(mrb, header, ": ");
+      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
+      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+  }
+
   res = curl_easy_perform(curl);
+
+  if (headerlist)
+    curl_slist_free_all(headerlist);
+
   curl_easy_cleanup(curl);
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
-  mrb_value str = mrb_str_new(mrb, mf_header->data, mf_header->size);
-  mrb_str_cat(mrb, str, mf_body->data, mf_body->size);
-  memfclose(mf_body);
-  memfclose(mf_header);
+  mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
+  memfclose(mf);
 
   struct RClass* clazz = mrb_class_get(mrb, "HTTP");
   clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
@@ -110,12 +131,12 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   char error[CURL_ERROR_SIZE] = {0};
   CURL* curl;
   CURLcode res = CURLE_OK;
-  MEMFILE* mf_header;
-  MEMFILE* mf_body;
+  MEMFILE* mf;
 
   mrb_value url = mrb_nil_value();
   mrb_value data = mrb_nil_value();
-  mrb_get_args(mrb, "oo", &url, &data);
+  mrb_value headers = mrb_nil_value();
+  mrb_get_args(mrb, "oo|o", &url, &data, &headers);
 
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
@@ -124,27 +145,43 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
   // TODO: treating HASH/ARRAY.
-  mf_body = memfopen();
-  mf_header = memfopen();
+  mf = memfopen();
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf_body);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf_header);
+  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+
+  struct curl_slist* headerlist = NULL;
+  if (!mrb_nil_p(headers)) {
+    mrb_value keys = mrb_hash_keys(mrb, headers);
+    int i, l = RARRAY_LEN(keys);
+    for (i = 0; i < l; i++) {
+      mrb_value key = mrb_ary_entry(keys, i);
+      mrb_value header = mrb_str_dup(mrb, key);
+      mrb_str_cat2(mrb, header, ": ");
+      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
+      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+  }
+
   res = curl_easy_perform(curl);
+
+  if (headerlist)
+    curl_slist_free_all(headerlist);
+
   curl_easy_cleanup(curl);
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
-  mrb_value str = mrb_str_new(mrb, mf_header->data, mf_header->size);
-  mrb_str_cat(mrb, str, mf_body->data, mf_body->size);
-  memfclose(mf_body);
-  memfclose(mf_header);
+  mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
+  memfclose(mf);
 
   struct RClass* clazz = mrb_class_get(mrb, "HTTP");
   clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
@@ -198,8 +235,8 @@ void
 mrb_mruby_curl_gem_init(mrb_state* mrb)
 {
   _class_curl = mrb_define_module(mrb, "Curl");
-  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_REQ(1));
-  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_REQ(2));
+  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_OPT(1));
+  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_OPT(1));
   //mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_post, ARGS_REQ(2));
 }
 
