@@ -19,4 +19,4 @@ req.headers['Authorization'] = "token #{ARGV[0]}"
 req.headers['Content-Type'] = "application/json"
 Curl::SSL_VERIFYPEER = 0
 res = Curl::send("https://api.github.com/gists", req)
-puts JSON::parse(res.body)['url']
+puts JSON::parse(res.body)['html_url']
