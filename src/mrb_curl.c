@@ -18,6 +18,9 @@ static struct RClass *_class_curl;
 typedef struct {
   char* data;   // response data from server
   size_t size;  // response size of data
+  mrb_state* mrb;
+  mrb_value proc;
+  mrb_value header;
 } MEMFILE;
 
 static MEMFILE*
@@ -52,6 +55,29 @@ memfwrite(char* ptr, size_t size, size_t nmemb, void* stream) {
   return block;
 }
 
+static size_t
+memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
+  MEMFILE* mf = (MEMFILE*) stream;
+  int block = size * nmemb;
+
+  mrb_value args[2];
+  mrb_state* mrb = mf->mrb;
+
+  if (mf->data && mrb_nil_p(mf->header))  {
+    mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
+    struct RClass* clazz = mrb_class_get(mrb, "HTTP");
+    clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
+    mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+    args[0] = str;
+    mf->header = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  }
+
+  args[0] = mf->header;
+  args[1] = mrb_str_new(mrb, ptr, block);
+  mrb_yield_argv(mrb, mf->proc, 2, args);
+  return block;
+}
+
 static char*
 memfstrdup(MEMFILE* mf) {
   char* buf;
@@ -72,7 +98,8 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
 
   mrb_value url = mrb_nil_value();
   mrb_value headers = mrb_nil_value();
-  mrb_get_args(mrb, "o|o", &url, &headers);
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "o|o&", &url, &headers, &b);
 
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
@@ -87,7 +114,14 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  if (mrb_nil_p(b)) {
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  } else {
+    mf->mrb = mrb;
+    mf->proc = b;
+    mf->header = mrb_nil_value();
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite_callback);
+  }
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
@@ -115,6 +149,10 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
+  if (!mrb_nil_p(b)) {
+    return mrb_nil_value();
+  }
+
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
@@ -138,7 +176,8 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mrb_value url = mrb_nil_value();
   mrb_value data = mrb_nil_value();
   mrb_value headers = mrb_nil_value();
-  mrb_get_args(mrb, "oo|o", &url, &data, &headers);
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "oo|o&", &url, &data, &headers, &b);
 
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
@@ -156,7 +195,14 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  if (mrb_nil_p(b)) {
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  } else {
+    mf->mrb = mrb;
+    mf->proc = b;
+    mf->header = mrb_nil_value();
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite_callback);
+  }
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
@@ -184,6 +230,10 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
+  if (!mrb_nil_p(b)) {
+    return mrb_nil_value();
+  }
+
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
@@ -206,7 +256,8 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
 
   mrb_value url = mrb_nil_value();
   mrb_value req = mrb_nil_value();
-  mrb_get_args(mrb, "oo", &url, &req);
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "oo&", &url, &req, &b);
 
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
@@ -230,7 +281,14 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(body));
   }
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  if (mrb_nil_p(b)) {
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
+  } else {
+    mf->mrb = mrb;
+    mf->proc = b;
+    mf->header = mrb_nil_value();
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite_callback);
+  }
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
@@ -259,6 +317,10 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   if (res != CURLE_OK) {
     mrb_raise(mrb, E_RUNTIME_ERROR, error);
   }
+  if (!mrb_nil_p(b)) {
+    return mrb_nil_value();
+  }
+
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
