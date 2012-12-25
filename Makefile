@@ -2,8 +2,11 @@ GEM := mruby-curl
 
 include $(MAKEFILE_4_GEM)
 
-INCLUDE += -I$(MRUBY_ROOT)/include
-CFLAGS  += $(INCLUDE) -g -O3
+ifeq ($(OS),Windows_NT)
+MRUBY_LIBS = -lcurldll
+else
+MRUBY_LIBS = -lcurl
+endif
 
 GEM_C_FILES := $(wildcard $(SRC_DIR)/*.c)
 GEM_OBJECTS := $(patsubst %.c, %.o, $(GEM_C_FILES))
