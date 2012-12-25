@@ -10,6 +10,19 @@
 #include <curl/curl.h>
 #include <stdio.h>
 
+#if 1
+#define ARENA_SAVE \
+  int ai = mrb_gc_arena_save(mrb); \
+  if (ai == MRB_ARENA_SIZE) { \
+    mrb_raise(mrb, E_RUNTIME_ERROR, "arena overflow"); \
+  }
+#define ARENA_RESTORE \
+  mrb_gc_arena_restore(mrb, ai);
+#else
+#define ARENA_SAVE
+#define ARENA_RESTORE
+#endif
+
 #define REQ_GET(mrb, instance, name) \
   RSTRING_PTR(mrb_iv_get(mrb, instance, mrb_intern(mrb, name)))
 
@@ -63,6 +76,7 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   mrb_value args[2];
   mrb_state* mrb = mf->mrb;
 
+  ARENA_SAVE;
   if (mf->data && mrb_nil_p(mf->header))  {
     mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
     struct RClass* clazz = mrb_class_get(mrb, "HTTP");
@@ -74,6 +88,7 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
 
   args[0] = mf->header;
   args[1] = mrb_str_new(mrb, ptr, block);
+  ARENA_RESTORE;
   mrb_yield_argv(mrb, mf->proc, 2, args);
   return block;
 }
