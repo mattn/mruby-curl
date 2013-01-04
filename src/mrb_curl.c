@@ -351,11 +351,13 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
 void
 mrb_mruby_curl_gem_init(mrb_state* mrb)
 {
+  ARENA_SAVE;
   _class_curl = mrb_define_module(mrb, "Curl");
   mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_OPT(1));
   mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_OPT(1));
   mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, ARGS_REQ(2));
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
+  ARENA_RESTORE;
 }
 
 /* vim:set et ts=2 sts=2 sw=2 tw=0: */
