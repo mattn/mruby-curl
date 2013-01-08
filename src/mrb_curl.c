@@ -26,8 +26,6 @@
 #define REQ_GET(mrb, instance, name) \
   RSTRING_PTR(mrb_iv_get(mrb, instance, mrb_intern(mrb, name)))
 
-static struct RClass *_class_curl;
-
 typedef struct {
   char* data;   // response data from server
   size_t size;  // response size of data
@@ -79,9 +77,9 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   ARENA_SAVE;
   if (mf->data && mrb_nil_p(mf->header))  {
     mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
-    struct RClass* clazz = mrb_class_get(mrb, "HTTP");
-    clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
-    mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+    struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
+    struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+    mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
     args[0] = str;
     mf->header = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
   }
@@ -124,6 +122,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   }
   mf = memfopen();
   curl = curl_easy_init();
+  struct RClass* _class_curl = mrb_class_get(mrb, "Curl");
   int ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -171,9 +170,9 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  struct RClass* clazz = mrb_class_get(mrb, "HTTP");
-  clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
-  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+  struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
+  struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
   mrb_value args[1];
   args[0] = str;
   mrb_value response = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
@@ -203,6 +202,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   // TODO: treating HASH/ARRAY.
   mf = memfopen();
   curl = curl_easy_init();
+  struct RClass* _class_curl = mrb_class_get(mrb, "Curl");
   int ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -252,9 +252,9 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  struct RClass* clazz = mrb_class_get(mrb, "HTTP");
-  clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
-  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+  struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
+  struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
   mrb_value args[1];
   args[0] = str;
   mrb_value response = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
@@ -277,14 +277,15 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   if (mrb_type(url) != MRB_TT_STRING) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
-  mrb_value req_clazz = mrb_funcall(mrb, req, "class", 0, NULL);
-  mrb_value name = mrb_funcall(mrb, req_clazz, "to_s", 0, NULL);
+  mrb_value _class_http_request = mrb_funcall(mrb, req, "class", 0, NULL);
+  mrb_value name = mrb_funcall(mrb, _class_http_request, "to_s", 0, NULL);
   if (strcmp(RSTRING_PTR(name), "HTTP::Request")) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
   
   mf = memfopen();
   curl = curl_easy_init();
+  struct RClass* _class_curl = mrb_class_get(mrb, "Curl");
   int ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -339,9 +340,9 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  struct RClass* clazz = mrb_class_get(mrb, "HTTP");
-  clazz = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(clazz), mrb_intern(mrb, "Parser")));
-  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, clazz);
+  struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
+  struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
   mrb_value args[1];
   args[0] = str;
   mrb_value response = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
@@ -352,7 +353,7 @@ void
 mrb_mruby_curl_gem_init(mrb_state* mrb)
 {
   ARENA_SAVE;
-  _class_curl = mrb_define_module(mrb, "Curl");
+  struct RClass* _class_curl = mrb_define_module(mrb, "Curl");
   mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_OPT(1));
   mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_OPT(1));
   mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, ARGS_REQ(2));
