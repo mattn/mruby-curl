@@ -91,16 +91,6 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   return block;
 }
 
-static char*
-memfstrdup(MEMFILE* mf) {
-  char* buf;
-  if (mf->size == 0) return NULL;
-  buf = (char*) malloc(mf->size + 1);
-  memcpy(buf, mf->data, mf->size);
-  buf[mf->size] = 0;
-  return buf;
-}
-
 static mrb_value
 mrb_curl_get(mrb_state *mrb, mrb_value self)
 {
