@@ -102,11 +102,8 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   mrb_value url = mrb_nil_value();
   mrb_value headers = mrb_nil_value();
   mrb_value b = mrb_nil_value();
-  mrb_get_args(mrb, "o|o&", &url, &headers, &b);
+  mrb_get_args(mrb, "S|H&", &url, &headers, &b);
 
-  if (mrb_type(url) != MRB_TT_STRING) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
-  }
   if (!mrb_nil_p(headers) && mrb_type(headers) != MRB_TT_HASH) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
@@ -181,14 +178,8 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mrb_value data = mrb_nil_value();
   mrb_value headers = mrb_nil_value();
   mrb_value b = mrb_nil_value();
-  mrb_get_args(mrb, "oo|o&", &url, &data, &headers, &b);
+  mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
 
-  if (mrb_type(url) != MRB_TT_STRING) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
-  }
-  if (mrb_type(data) != MRB_TT_STRING) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
-  }
   // TODO: treating HASH/ARRAY.
   mf = memfopen();
   curl = curl_easy_init();
@@ -262,11 +253,8 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   mrb_value url = mrb_nil_value();
   mrb_value req = mrb_nil_value();
   mrb_value b = mrb_nil_value();
-  mrb_get_args(mrb, "oo&", &url, &req, &b);
+  mrb_get_args(mrb, "So&", &url, &req, &b);
 
-  if (mrb_type(url) != MRB_TT_STRING) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
-  }
   mrb_value _class_http_request = mrb_funcall(mrb, req, "class", 0, NULL);
   mrb_value name = mrb_funcall(mrb, _class_http_request, "to_s", 0, NULL);
   if (strcmp(RSTRING_PTR(name), "HTTP::Request")) {
@@ -344,8 +332,8 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
 {
   ARENA_SAVE;
   struct RClass* _class_curl = mrb_define_module(mrb, "Curl");
-  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_OPT(1));
-  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_OPT(1));
+  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_REQ(1) | ARGS_OPT(1));
+  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_REQ(2) | ARGS_OPT(1));
   mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, ARGS_REQ(2));
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   ARENA_RESTORE;
