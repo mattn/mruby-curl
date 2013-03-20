@@ -8,7 +8,7 @@
 #include <mruby/class.h>
 #include <mruby/variable.h>
 #include <curl/curl.h>
-#include <stdio.h>
+#include <stdlib.h>
 
 #define REQ_GET(mrb, instance, name) \
   RSTRING_PTR(mrb_iv_get(mrb, instance, mrb_intern(mrb, name)))
