@@ -66,7 +66,7 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
     mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
     struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
     struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
-    mrb_value parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
+    mrb_value parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
     args[0] = str;
     mf->header = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
   }
@@ -153,7 +153,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
 
   _class_http = mrb_class_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
-  parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
+  parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
   return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
 }
@@ -234,7 +234,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
 
   _class_http = mrb_class_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
-  parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
+  parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
   return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
 }
@@ -329,7 +329,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
 
   _class_http = mrb_class_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
-  parser = mrb_class_new_instance(mrb, 0, NULL, _class_http_parser);
+  parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
   return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
 }
