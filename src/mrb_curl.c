@@ -11,7 +11,7 @@
 #include <stdlib.h>
 
 #define REQ_GET(mrb, instance, name) \
-  RSTRING_PTR(mrb_iv_get(mrb, instance, mrb_intern(mrb, name)))
+  RSTRING_PTR(mrb_iv_get(mrb, instance, mrb_intern_cstr(mrb, name)))
 
 typedef struct {
   char* data;   // response data from server
@@ -65,10 +65,10 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   if (mf->data && mrb_nil_p(mf->header))  {
     mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
     struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
-    struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+    struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
     mrb_value parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
     args[0] = str;
-    mf->header = mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+    mf->header = mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
   }
 
   args[0] = mf->header;
@@ -105,7 +105,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   mf = memfopen();
   curl = curl_easy_init();
   _class_curl = mrb_class_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
+  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
@@ -152,10 +152,10 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   memfclose(mf);
 
   _class_http = mrb_class_get(mrb, "HTTP");
-  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
-  return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  return mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
 }
 
 static mrb_value
@@ -184,7 +184,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mf = memfopen();
   curl = curl_easy_init();
   _class_curl = mrb_class_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
+  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
@@ -233,10 +233,10 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   memfclose(mf);
 
   _class_http = mrb_class_get(mrb, "HTTP");
-  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
-  return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  return mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
 }
 
 static mrb_value
@@ -274,7 +274,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   mf = memfopen();
   curl = curl_easy_init();
   _class_curl = mrb_class_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern(mrb, "SSL_VERIFYPEER")));
+  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
@@ -328,10 +328,10 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   memfclose(mf);
 
   _class_http = mrb_class_get(mrb, "HTTP");
-  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern(mrb, "Parser")));
+  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
-  return mrb_funcall_argv(mrb, parser, mrb_intern(mrb, "parse_response"), 1, args);
+  return mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
 }
 
 void
