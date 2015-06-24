@@ -340,9 +340,9 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   struct RClass* _class_curl;
   int ai = mrb_gc_arena_save(mrb); \
   _class_curl = mrb_define_module(mrb, "Curl");
-  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, ARGS_REQ(1) | ARGS_OPT(1));
-  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, ARGS_REQ(2) | ARGS_OPT(1));
-  mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, ARGS_REQ(2));
+  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
+  mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, MRB_ARGS_REQ(2));
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   mrb_gc_arena_restore(mrb, ai);
 }
