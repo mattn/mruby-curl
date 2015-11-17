@@ -64,7 +64,7 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   int ai = mrb_gc_arena_save(mrb); \
   if (mf->data && mrb_nil_p(mf->header))  {
     mrb_value str = mrb_str_new(mrb, mf->data, mf->size);
-    struct RClass* _class_http = mrb_class_get(mrb, "HTTP");
+    struct RClass* _class_http = mrb_module_get(mrb, "HTTP");
     struct RClass* _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
     mrb_value parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
     args[0] = str;
@@ -104,7 +104,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   }
   mf = memfopen();
   curl = curl_easy_init();
-  _class_curl = mrb_class_get(mrb, "Curl");
+  _class_curl = mrb_module_get(mrb, "Curl");
   ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -151,7 +151,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  _class_http = mrb_class_get(mrb, "HTTP");
+  _class_http = mrb_module_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
@@ -183,7 +183,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   // TODO: treating HASH/ARRAY.
   mf = memfopen();
   curl = curl_easy_init();
-  _class_curl = mrb_class_get(mrb, "Curl");
+  _class_curl = mrb_module_get(mrb, "Curl");
   ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -232,7 +232,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  _class_http = mrb_class_get(mrb, "HTTP");
+  _class_http = mrb_module_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
@@ -273,7 +273,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   
   mf = memfopen();
   curl = curl_easy_init();
-  _class_curl = mrb_class_get(mrb, "Curl");
+  _class_curl = mrb_module_get(mrb, "Curl");
   ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
@@ -327,7 +327,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   str = mrb_str_new(mrb, mf->data, mf->size);
   memfclose(mf);
 
-  _class_http = mrb_class_get(mrb, "HTTP");
+  _class_http = mrb_module_get(mrb, "HTTP");
   _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
   parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
   args[0] = str;
@@ -340,9 +340,9 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   struct RClass* _class_curl;
   int ai = mrb_gc_arena_save(mrb); \
   _class_curl = mrb_define_module(mrb, "Curl");
-  mrb_define_class_method(mrb, _class_curl, "get", mrb_curl_get, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
-  mrb_define_class_method(mrb, _class_curl, "post", mrb_curl_post, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
-  mrb_define_class_method(mrb, _class_curl, "send", mrb_curl_send, MRB_ARGS_REQ(2));
+  mrb_define_module_function(mrb, _class_curl, "get", mrb_curl_get, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_module_function(mrb, _class_curl, "post", mrb_curl_post, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
+  mrb_define_module_function(mrb, _class_curl, "send", mrb_curl_send, MRB_ARGS_REQ(2));
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   mrb_gc_arena_restore(mrb, ai);
 }
