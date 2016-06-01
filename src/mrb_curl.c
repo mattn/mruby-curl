@@ -79,37 +79,34 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
 }
 
 static mrb_value
-mrb_curl_get(mrb_state *mrb, mrb_value self)
-{
-  char error[CURL_ERROR_SIZE] = {0};
-  CURL* curl;
+mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, mrb_value b) {
   CURLcode res = CURLE_OK;
   MEMFILE* mf;
-  struct RClass* _class_curl;
+  char error[CURL_ERROR_SIZE] = {0};
   int ssl_verifypeer;
-  struct curl_slist* headerlist = NULL;
+  mrb_value args[1];
+  mrb_value parser;
   mrb_value str;
+  struct RClass* _class_curl;
   struct RClass* _class_http;
   struct RClass* _class_http_parser;
-  mrb_value parser;
-  mrb_value args[1];
-
-  mrb_value url = mrb_nil_value();
-  mrb_value headers = mrb_nil_value();
-  mrb_value b = mrb_nil_value();
-  mrb_get_args(mrb, "S|H&", &url, &headers, &b);
+  struct curl_slist* headerlist = NULL;
 
   if (!mrb_nil_p(headers) && mrb_type(headers) != MRB_TT_HASH) {
     mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
   }
-  mf = memfopen();
-  curl = curl_easy_init();
+
+  curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
+
+  curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+
   _class_curl = mrb_module_get(mrb, "Curl");
   ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
-  curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
-  curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
+
+  mf = memfopen();
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
+
   if (mrb_nil_p(b)) {
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
   } else {
@@ -159,20 +156,25 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
+mrb_curl_get(mrb_state *mrb, mrb_value self)
+{
+  CURL* curl;
+
+  mrb_value url = mrb_nil_value();
+  mrb_value headers = mrb_nil_value();
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "S|H&", &url, &headers, &b);
+
+  curl = curl_easy_init();
+  curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+
+  return mrb_curl_perform(mrb, curl, url, headers, b);
+}
+
+static mrb_value
 mrb_curl_post(mrb_state *mrb, mrb_value self)
 {
-  char error[CURL_ERROR_SIZE] = {0};
   CURL* curl;
-  CURLcode res = CURLE_OK;
-  MEMFILE* mf;
-  struct RClass* _class_curl;
-  int ssl_verifypeer;
-  struct curl_slist* headerlist = NULL;
-  mrb_value str;
-  struct RClass* _class_http;
-  struct RClass* _class_http_parser;
-  mrb_value parser;
-  mrb_value args[1];
 
   mrb_value url = mrb_nil_value();
   mrb_value data = mrb_nil_value();
@@ -180,63 +182,11 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
 
-  // TODO: treating HASH/ARRAY.
-  mf = memfopen();
   curl = curl_easy_init();
-  _class_curl = mrb_module_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
-  curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
-  curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
-  if (mrb_nil_p(b)) {
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite);
-  } else {
-    mf->mrb = mrb;
-    mf->proc = b;
-    mf->header = mrb_nil_value();
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, memfwrite_callback);
-  }
-  curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
-  curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
 
-  if (!mrb_nil_p(headers)) {
-    mrb_value keys = mrb_hash_keys(mrb, headers);
-    int i, l = RARRAY_LEN(keys);
-    for (i = 0; i < l; i++) {
-      mrb_value key = mrb_ary_entry(keys, i);
-      mrb_value header = mrb_str_dup(mrb, key);
-      mrb_str_cat2(mrb, header, ": ");
-      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
-      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
-    }
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
-  }
-
-  res = curl_easy_perform(curl);
-
-  if (headerlist)
-    curl_slist_free_all(headerlist);
-
-  curl_easy_cleanup(curl);
-  if (res != CURLE_OK) {
-    mrb_raise(mrb, E_RUNTIME_ERROR, error);
-  }
-  if (!mrb_nil_p(b)) {
-    return mrb_nil_value();
-  }
-
-  str = mrb_str_new(mrb, mf->data, mf->size);
-  memfclose(mf);
-
-  _class_http = mrb_module_get(mrb, "HTTP");
-  _class_http_parser = mrb_class_ptr(mrb_const_get(mrb, mrb_obj_value(_class_http), mrb_intern_cstr(mrb, "Parser")));
-  parser = mrb_obj_new(mrb, _class_http_parser, 0, NULL);
-  args[0] = str;
-  return mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
+  return mrb_curl_perform(mrb, curl, url, headers, b);
 }
 
 static mrb_value
