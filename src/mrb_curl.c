@@ -78,6 +78,30 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
   return block;
 }
 
+static struct curl_slist*
+mrb_curl_headers(mrb_state *mrb, CURL* curl, mrb_value headers) {
+  struct curl_slist* headerlist = NULL;
+
+  if (!mrb_nil_p(headers) && mrb_type(headers) != MRB_TT_HASH) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
+  }
+
+  if (!mrb_nil_p(headers)) {
+    mrb_value keys = mrb_hash_keys(mrb, headers);
+    int i, l = RARRAY_LEN(keys);
+    for (i = 0; i < l; i++) {
+      mrb_value key = mrb_ary_entry(keys, i);
+      mrb_value header = mrb_str_dup(mrb, key);
+      mrb_str_cat2(mrb, header, ": ");
+      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
+      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
+    }
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
+  }
+
+  return headerlist;
+}
+
 static mrb_value
 mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, mrb_value b) {
   CURLcode res = CURLE_OK;
@@ -90,11 +114,7 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   struct RClass* _class_curl;
   struct RClass* _class_http;
   struct RClass* _class_http_parser;
-  struct curl_slist* headerlist = NULL;
-
-  if (!mrb_nil_p(headers) && mrb_type(headers) != MRB_TT_HASH) {
-    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument");
-  }
+  struct curl_slist* headerlist;
 
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
 
@@ -119,18 +139,7 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
 
-  if (!mrb_nil_p(headers)) {
-    mrb_value keys = mrb_hash_keys(mrb, headers);
-    int i, l = RARRAY_LEN(keys);
-    for (i = 0; i < l; i++) {
-      mrb_value key = mrb_ary_entry(keys, i);
-      mrb_value header = mrb_str_dup(mrb, key);
-      mrb_str_cat2(mrb, header, ": ");
-      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
-      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
-    }
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
-  }
+  headerlist = mrb_curl_headers(mrb, curl, headers);
 
   res = curl_easy_perform(curl);
 
@@ -254,7 +263,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   MEMFILE* mf;
   struct RClass* _class_curl;
   int ssl_verifypeer;
-  struct curl_slist* headerlist = NULL;
+  struct curl_slist* headerlist;
   mrb_value body;
   mrb_value method;
   mrb_value _class_http_request;
@@ -304,18 +313,8 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
 
   headers = mrb_funcall(mrb, req, "headers", 0, NULL);
-  if (!mrb_nil_p(headers)) {
-    mrb_value keys = mrb_hash_keys(mrb, headers);
-    int i, l = RARRAY_LEN(keys);
-    for (i = 0; i < l; i++) {
-      mrb_value key = mrb_ary_entry(keys, i);
-      mrb_value header = mrb_str_dup(mrb, key);
-      mrb_str_cat2(mrb, header, ": ");
-      mrb_str_concat(mrb, header, mrb_hash_get(mrb, headers, key));
-      headerlist = curl_slist_append(headerlist, RSTRING_PTR(header));
-    }
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerlist);
-  }
+
+  headerlist = mrb_curl_headers(mrb, curl, headers);
 
   res = curl_easy_perform(curl);
 
