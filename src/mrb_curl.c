@@ -156,6 +156,24 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
 }
 
 static mrb_value
+mrb_curl_delete(mrb_state *mrb, mrb_value self)
+{
+  CURL* curl;
+
+  mrb_value url = mrb_nil_value();
+  mrb_value headers = mrb_nil_value();
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "S|H&", &url, &headers, &b);
+
+  curl = curl_easy_init();
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+  curl_easy_setopt(curl, CURLOPT_UPLOAD, 0);
+  curl_easy_setopt(curl, CURLOPT_NOBODY, 0);
+
+  return mrb_curl_perform(mrb, curl, url, headers, b);
+}
+
+static mrb_value
 mrb_curl_get(mrb_state *mrb, mrb_value self)
 {
   CURL* curl;
@@ -167,6 +185,25 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
 
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+
+  return mrb_curl_perform(mrb, curl, url, headers, b);
+}
+
+static mrb_value
+mrb_curl_patch(mrb_state *mrb, mrb_value self)
+{
+  CURL* curl;
+
+  mrb_value url = mrb_nil_value();
+  mrb_value data = mrb_nil_value();
+  mrb_value headers = mrb_nil_value();
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
+
+  curl = curl_easy_init();
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
+
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
 
   return mrb_curl_perform(mrb, curl, url, headers, b);
 }
@@ -185,6 +222,25 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
+
+  return mrb_curl_perform(mrb, curl, url, headers, b);
+}
+
+static mrb_value
+mrb_curl_put(mrb_state *mrb, mrb_value self)
+{
+  CURL* curl;
+
+  mrb_value url = mrb_nil_value();
+  mrb_value data = mrb_nil_value();
+  mrb_value headers = mrb_nil_value();
+  mrb_value b = mrb_nil_value();
+  mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
+
+  curl = curl_easy_init();
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
+
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
   return mrb_curl_perform(mrb, curl, url, headers, b);
 }
@@ -290,8 +346,11 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   struct RClass* _class_curl;
   int ai = mrb_gc_arena_save(mrb); \
   _class_curl = mrb_define_module(mrb, "Curl");
+  mrb_define_module_function(mrb, _class_curl, "delete", mrb_curl_delete, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
   mrb_define_module_function(mrb, _class_curl, "get", mrb_curl_get, MRB_ARGS_REQ(1) | MRB_ARGS_OPT(1));
+  mrb_define_module_function(mrb, _class_curl, "patch", mrb_curl_patch, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
   mrb_define_module_function(mrb, _class_curl, "post", mrb_curl_post, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
+  mrb_define_module_function(mrb, _class_curl, "put", mrb_curl_put, MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
   mrb_define_module_function(mrb, _class_curl, "send", mrb_curl_send, MRB_ARGS_REQ(2));
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   mrb_gc_arena_restore(mrb, ai);
