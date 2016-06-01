@@ -102,16 +102,26 @@ mrb_curl_headers(mrb_state *mrb, CURL* curl, mrb_value headers) {
   return headerlist;
 }
 
+static void
+mrb_curl_verifypeer(mrb_state *mrb, CURL *curl) {
+  int ssl_verifypeer;
+  struct RClass* _class_curl;
+
+  _class_curl = mrb_module_get(mrb, "Curl");
+
+  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
+
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
+}
+
 static mrb_value
 mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, mrb_value b) {
   CURLcode res = CURLE_OK;
   MEMFILE* mf;
   char error[CURL_ERROR_SIZE] = {0};
-  int ssl_verifypeer;
   mrb_value args[1];
   mrb_value parser;
   mrb_value str;
-  struct RClass* _class_curl;
   struct RClass* _class_http;
   struct RClass* _class_http_parser;
   struct curl_slist* headerlist;
@@ -119,10 +129,6 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
 
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
-
-  _class_curl = mrb_module_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
 
   mf = memfopen();
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, mf);
@@ -138,6 +144,8 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+
+  mrb_curl_verifypeer(mrb, curl);
 
   headerlist = mrb_curl_headers(mrb, curl, headers);
 
@@ -261,8 +269,6 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   CURL* curl;
   CURLcode res = CURLE_OK;
   MEMFILE* mf;
-  struct RClass* _class_curl;
-  int ssl_verifypeer;
   struct curl_slist* headerlist;
   mrb_value body;
   mrb_value method;
@@ -288,9 +294,6 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   
   mf = memfopen();
   curl = curl_easy_init();
-  _class_curl = mrb_module_get(mrb, "Curl");
-  ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
   curl_easy_setopt(curl, CURLOPT_URL, RSTRING_PTR(url));
   curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error);
   method = mrb_funcall(mrb, req, "method", 0, NULL);
@@ -311,6 +314,8 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+
+  mrb_curl_verifypeer(mrb, curl);
 
   headers = mrb_funcall(mrb, req, "headers", 0, NULL);
 
