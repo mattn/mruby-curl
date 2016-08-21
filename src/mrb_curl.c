@@ -210,6 +210,7 @@ mrb_curl_delete(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "S|H&", &url, &headers, &b);
 
+  curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
   curl_easy_setopt(curl, CURLOPT_UPLOAD, 0);
   curl_easy_setopt(curl, CURLOPT_NOBODY, 0);
@@ -227,6 +228,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "S|H&", &url, &headers, &b);
 
+  curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 
   return mrb_curl_perform(mrb, curl, url, headers, b);
@@ -243,6 +245,7 @@ mrb_curl_patch(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
 
+  curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
 
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
@@ -261,6 +264,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
 
+  curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
 
@@ -278,6 +282,7 @@ mrb_curl_put(mrb_state *mrb, mrb_value self)
   mrb_value b = mrb_nil_value();
   mrb_get_args(mrb, "SS|H&", &url, &data, &headers, &b);
 
+  curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
 
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
