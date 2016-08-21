@@ -85,6 +85,17 @@ memfwrite_callback(char* ptr, size_t size, size_t nmemb, void* stream) {
 }
 
 static mrb_value
+mrb_curl_global_init(mrb_state *mrb, mrb_value self) {
+  CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
+
+  if (res != CURLE_OK) {
+    mrb_raise(mrb, E_RUNTIME_ERROR, "unable to initialize libcurl");
+  }
+
+  return mrb_true_value();
+}
+
+static mrb_value
 mrb_curl_init(mrb_state *mrb, mrb_value self) {
   CURL* curl;
 
@@ -387,6 +398,8 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, _class_curl, "post",   mrb_curl_post,   MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
   mrb_define_method(mrb, _class_curl, "put",    mrb_curl_put,    MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
   mrb_define_method(mrb, _class_curl, "send",   mrb_curl_send,   MRB_ARGS_REQ(2));
+
+  mrb_define_class_method(mrb, _class_curl, "global_init", mrb_curl_global_init, MRB_ARGS_REQ(0));
 
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   mrb_gc_arena_restore(mrb, ai);
