@@ -1,5 +1,29 @@
 = mruby-curl
 
+mruby-curl is an [mruby](http://mruby.org) wrapper for
+[libcurl](https://curl.haxx.se/libcurl/).
+
+== Usage
+
+Example:
+
+```ruby
+curl = Curl.new
+
+headers = {
+  'User-Agent' => 'mruby-curl'
+}
+
+response = curl.get("http://www.ruby-lang.org/ja/", headers)
+
+puts response.body
+```
+
+mruby-curl has support for HTTP methods DELETE, GET, PATCH, POST, and PUT
+through instance methods on the Curl object and supports arbitrary HTTP
+requests using `Curl#send` with an `HTTP::Request` object from
+[mruby-http](https://github.com/mattn/mruby-http).
+
 == Threaded use
 
 By default mruby-curl does not call
