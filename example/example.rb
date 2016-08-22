@@ -1,3 +1,11 @@
 #!mruby
 
-puts Curl::get("http://www.ruby-lang.org/ja/", {"User-Agent"=>"curl"}).body
+curl = Curl.new
+
+headers = {
+  'User-Agent' => 'mruby-curl',
+}
+
+response = curl.get("http://www.ruby-lang.org/ja/", headers)
+
+puts response.body
