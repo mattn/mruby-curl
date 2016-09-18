@@ -5,6 +5,9 @@ MRuby::Gem::Specification.new('mruby-curl') do |spec|
   spec.add_dependency 'mruby-http'
 
   spec.linker.libraries << 'curl'
+  spec.linker.libraries << 'ssl'
+  spec.linker.libraries << 'crypto'
+  spec.linker.libraries << 'z'
   require 'open3'
 
   curl_version  = "7.50.2"
@@ -42,7 +45,7 @@ MRuby::Gem::Specification.new('mruby-curl') do |spec|
         'PREFIX' => "#{curl_dir}/build"
       }
 
-      configure_opts = %w(--prefix=$PREFIX --enable-static --disable-shared)
+      configure_opts = %w(--prefix=$PREFIX --enable-static --disable-shared --disable-ldap)
       if build.kind_of?(MRuby::CrossBuild) && build.host_target && build.build_target
         configure_opts += %W(--host #{spec.build.host_target} --build #{spec.build.build_target})
       end
