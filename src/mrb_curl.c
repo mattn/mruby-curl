@@ -143,8 +143,9 @@ mrb_curl_headers(mrb_state *mrb, CURL* curl, mrb_value headers) {
 }
 
 static void
-mrb_curl_verifypeer(mrb_state *mrb, CURL *curl) {
+mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   int ssl_verifypeer;
+  mrb_value mv_cainfo = mrb_nil_value();
   struct RClass* _class_curl;
 
   _class_curl = mrb_class_get(mrb, "Curl");
@@ -152,6 +153,12 @@ mrb_curl_verifypeer(mrb_state *mrb, CURL *curl) {
   ssl_verifypeer = mrb_fixnum(mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "SSL_VERIFYPEER")));
 
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, ssl_verifypeer);
+
+  mv_cainfo = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "CAINFO"));
+
+  if (!mrb_nil_p(mv_cainfo)) {
+    curl_easy_setopt(curl, CURLOPT_CAINFO, RSTRING_PTR(mv_cainfo));
+  }
 }
 
 static mrb_value
@@ -185,7 +192,7 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
 
-  mrb_curl_verifypeer(mrb, curl);
+  mrb_curl_set_options(mrb, curl);
 
   headerlist = mrb_curl_headers(mrb, curl, headers);
 
@@ -353,7 +360,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
 
-  mrb_curl_verifypeer(mrb, curl);
+  mrb_curl_set_options(mrb, curl);
 
   headers = mrb_funcall(mrb, req, "headers", 0, NULL);
 
@@ -402,6 +409,8 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   mrb_define_class_method(mrb, _class_curl, "global_init", mrb_curl_global_init, MRB_ARGS_REQ(0));
 
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
+  mrb_define_const(mrb, _class_curl, "CAINFO", mrb_nil_value());
+
   mrb_gc_arena_restore(mrb, ai);
 }
 
