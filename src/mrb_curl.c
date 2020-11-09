@@ -184,6 +184,7 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+  curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
 
   mrb_curl_verifypeer(mrb, curl);
 
@@ -352,6 +353,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_HEADERDATA, mf);
   curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, memfwrite);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
+  curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
 
   mrb_curl_verifypeer(mrb, curl);
 
