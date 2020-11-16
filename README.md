@@ -24,6 +24,15 @@ through instance methods on the Curl object and supports arbitrary HTTP
 requests using `Curl#send` with an `HTTP::Request` object from
 [mruby-http](https://github.com/mattn/mruby-http).
 
+
+=== Use HTTP 1.0 instead of 1.1
+
+```ruby
+curl = Curl.new
+curl.HTTP_VERSION = Curl::HTTP_1_0
+response = curl.get("http://www.ruby-lang.org/ja/")
+```
+
 == Threaded use
 
 By default mruby-curl does not call
