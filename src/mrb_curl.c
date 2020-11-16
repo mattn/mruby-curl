@@ -145,6 +145,7 @@ mrb_curl_headers(mrb_state *mrb, CURL* curl, mrb_value headers) {
 static void
 mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   int ssl_verifypeer;
+  mrb_value http_version;
   mrb_value mv_cainfo = mrb_nil_value();
   struct RClass* _class_curl;
 
@@ -159,6 +160,8 @@ mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   if (!mrb_nil_p(mv_cainfo)) {
     curl_easy_setopt(curl, CURLOPT_CAINFO, RSTRING_PTR(mv_cainfo));
   }
+  http_version = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "HTTP_VERSION"));
+  curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, mrb_int(mrb, http_version));
 }
 
 static mrb_value
@@ -412,6 +415,9 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
 
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
   mrb_define_const(mrb, _class_curl, "CAINFO", mrb_nil_value());
+  mrb_define_const(mrb, _class_curl, "HTTP_VERSION", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
+  mrb_define_const(mrb, _class_curl, "HTTP_1_0", mrb_fixnum_value(CURL_HTTP_VERSION_1_0));
+  mrb_define_const(mrb, _class_curl, "HTTP_1_1", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
 
   mrb_gc_arena_restore(mrb, ai);
 }
