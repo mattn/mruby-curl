@@ -147,6 +147,8 @@ mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   int ssl_verifypeer;
   mrb_value http_version;
   mrb_value mv_cainfo = mrb_nil_value();
+  mrb_value timeout;
+  mrb_value timeout_ms;
   struct RClass* _class_curl;
 
   _class_curl = mrb_class_get(mrb, "Curl");
@@ -162,6 +164,12 @@ mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   }
   http_version = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "HTTP_VERSION"));
   curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, mrb_int(mrb, http_version));
+
+  timeout = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "TIMEOUT"));
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, mrb_int(mrb, timeout));
+
+  timeout_ms = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "TIMEOUT_MS"));
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, mrb_int(mrb, timeout_ms));
 }
 
 static mrb_value
@@ -418,6 +426,8 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   mrb_define_const(mrb, _class_curl, "HTTP_VERSION", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
   mrb_define_const(mrb, _class_curl, "HTTP_1_0", mrb_fixnum_value(CURL_HTTP_VERSION_1_0));
   mrb_define_const(mrb, _class_curl, "HTTP_1_1", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
+  mrb_define_const(mrb, _class_curl, "TIMEOUT", mrb_fixnum_value(0));
+  mrb_define_const(mrb, _class_curl, "TIMEOUT_MS", mrb_fixnum_value(0));
 
   mrb_gc_arena_restore(mrb, ai);
 }
