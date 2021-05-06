@@ -143,10 +143,14 @@ mrb_curl_headers(mrb_state *mrb, CURL* curl, mrb_value headers) {
 }
 
 static void
-mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
+mrb_curl_set_options(mrb_state *mrb, mrb_value self) {
+  CURL* curl = DATA_GET_PTR(mrb, self, &mrb_curl_type, CURL);
+
   int ssl_verifypeer;
   mrb_value http_version;
   mrb_value mv_cainfo = mrb_nil_value();
+  mrb_value timeout;
+  mrb_value timeout_ms;
   struct RClass* _class_curl;
 
   _class_curl = mrb_class_get(mrb, "Curl");
@@ -162,10 +166,27 @@ mrb_curl_set_options(mrb_state *mrb, CURL *curl) {
   }
   http_version = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "HTTP_VERSION"));
   curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, mrb_int(mrb, http_version));
+
+  timeout = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "timeout"));
+  if (mrb_nil_p(timeout)) {
+    timeout = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "TIMEOUT"));
+  }
+  if (!mrb_nil_p(timeout)) {
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, mrb_int(mrb, timeout));
+  }
+
+  timeout_ms = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "timeout_ms"));
+  if (mrb_nil_p(timeout_ms)) {
+    timeout_ms = mrb_const_get(mrb, mrb_obj_value(_class_curl), mrb_intern_cstr(mrb, "TIMEOUT_MS"));
+  }
+  if (!mrb_nil_p(timeout_ms)) {
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, mrb_int(mrb, timeout_ms));
+  }
 }
 
 static mrb_value
-mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, mrb_value b) {
+mrb_curl_perform(mrb_state *mrb, mrb_value self, mrb_value url, mrb_value headers, mrb_value b) {
+  CURL* curl = DATA_GET_PTR(mrb, self, &mrb_curl_type, CURL);
   CURLcode res = CURLE_OK;
   MEMFILE* mf;
   char error[CURL_ERROR_SIZE] = {0};
@@ -196,7 +217,7 @@ mrb_curl_perform(mrb_state *mrb, CURL* curl, mrb_value url, mrb_value headers, m
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
   curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
 
-  mrb_curl_set_options(mrb, curl);
+  mrb_curl_set_options(mrb, self);
 
   headerlist = mrb_curl_headers(mrb, curl, headers);
 
@@ -237,7 +258,7 @@ mrb_curl_delete(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_UPLOAD, 0);
   curl_easy_setopt(curl, CURLOPT_NOBODY, 0);
 
-  return mrb_curl_perform(mrb, curl, url, headers, b);
+  return mrb_curl_perform(mrb, self, url, headers, b);
 }
 
 static mrb_value
@@ -253,7 +274,7 @@ mrb_curl_get(mrb_state *mrb, mrb_value self)
   curl_easy_reset(curl);
   curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
 
-  return mrb_curl_perform(mrb, curl, url, headers, b);
+  return mrb_curl_perform(mrb, self, url, headers, b);
 }
 
 static mrb_value
@@ -272,7 +293,7 @@ mrb_curl_patch(mrb_state *mrb, mrb_value self)
 
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
 
-  return mrb_curl_perform(mrb, curl, url, headers, b);
+  return mrb_curl_perform(mrb, self, url, headers, b);
 }
 
 static mrb_value
@@ -290,7 +311,7 @@ mrb_curl_post(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_POST, 1);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, RSTRING_PTR(data));
 
-  return mrb_curl_perform(mrb, curl, url, headers, b);
+  return mrb_curl_perform(mrb, self, url, headers, b);
 }
 
 static mrb_value
@@ -309,7 +330,7 @@ mrb_curl_put(mrb_state *mrb, mrb_value self)
 
   curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
 
-  return mrb_curl_perform(mrb, curl, url, headers, b);
+  return mrb_curl_perform(mrb, self, url, headers, b);
 }
 
 static mrb_value
@@ -365,7 +386,7 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0);
   curl_easy_setopt(curl, CURLOPT_HTTP_TRANSFER_DECODING, 0L);
 
-  mrb_curl_set_options(mrb, curl);
+  mrb_curl_set_options(mrb, self);
 
   headers = mrb_funcall(mrb, req, "headers", 0, NULL);
 
@@ -393,6 +414,44 @@ mrb_curl_send(mrb_state *mrb, mrb_value self)
   return mrb_funcall_argv(mrb, parser, mrb_intern_cstr(mrb, "parse_response"), 1, args);
 }
 
+static mrb_value
+mrb_curl_set_timeout(mrb_state *mrb, mrb_value self)
+{
+  mrb_value timeout = mrb_nil_value();
+  mrb_get_args(mrb, "o", &timeout);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "timeout"), timeout);
+
+  return timeout;
+}
+
+static mrb_value
+mrb_curl_get_timeout(mrb_state *mrb, mrb_value self)
+{
+  mrb_value timeout = mrb_nil_value();
+  timeout = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "timeout"));
+
+  return timeout;
+}
+
+static mrb_value
+mrb_curl_set_timeout_ms(mrb_state *mrb, mrb_value self)
+{
+  mrb_value timeout_ms = mrb_nil_value();
+  mrb_get_args(mrb, "o", &timeout_ms);
+  mrb_iv_set(mrb, self, mrb_intern_lit(mrb, "timeout_ms"), timeout_ms);
+
+  return timeout_ms;
+}
+
+static mrb_value
+mrb_curl_get_timeout_ms(mrb_state *mrb, mrb_value self)
+{
+  mrb_value timeout_ms = mrb_nil_value();
+  timeout_ms = mrb_iv_get(mrb, self, mrb_intern_lit(mrb, "timeout_ms"));
+
+  return timeout_ms;
+}
+
 void
 mrb_mruby_curl_gem_init(mrb_state* mrb)
 {
@@ -411,6 +470,11 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   mrb_define_method(mrb, _class_curl, "put",    mrb_curl_put,    MRB_ARGS_REQ(2) | MRB_ARGS_OPT(1));
   mrb_define_method(mrb, _class_curl, "send",   mrb_curl_send,   MRB_ARGS_REQ(2));
 
+  mrb_define_method(mrb, _class_curl, "timeout=", mrb_curl_set_timeout, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, _class_curl, "timeout", mrb_curl_get_timeout, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, _class_curl, "timeout_ms=", mrb_curl_set_timeout_ms, MRB_ARGS_REQ(1));
+  mrb_define_method(mrb, _class_curl, "timeout_ms", mrb_curl_get_timeout_ms, MRB_ARGS_REQ(1));
+
   mrb_define_class_method(mrb, _class_curl, "global_init", mrb_curl_global_init, MRB_ARGS_REQ(0));
 
   mrb_define_const(mrb, _class_curl, "SSL_VERIFYPEER", mrb_fixnum_value(1));
@@ -418,6 +482,8 @@ mrb_mruby_curl_gem_init(mrb_state* mrb)
   mrb_define_const(mrb, _class_curl, "HTTP_VERSION", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
   mrb_define_const(mrb, _class_curl, "HTTP_1_0", mrb_fixnum_value(CURL_HTTP_VERSION_1_0));
   mrb_define_const(mrb, _class_curl, "HTTP_1_1", mrb_fixnum_value(CURL_HTTP_VERSION_1_1));
+  mrb_define_const(mrb, _class_curl, "TIMEOUT", mrb_nil_value());
+  mrb_define_const(mrb, _class_curl, "TIMEOUT_MS", mrb_nil_value());
 
   mrb_gc_arena_restore(mrb, ai);
 }
