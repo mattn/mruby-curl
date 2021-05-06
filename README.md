@@ -29,7 +29,7 @@ requests using `Curl#send` with an `HTTP::Request` object from
 
 ```ruby
 curl = Curl.new
-curl.HTTP_VERSION = Curl::HTTP_1_0
+Curl::HTTP_VERSION = Curl::HTTP_1_0
 response = curl.get("http://www.ruby-lang.org/ja/")
 ```
 
